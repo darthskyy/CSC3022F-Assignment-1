@@ -1,7 +1,7 @@
 import os
 import threading
-from socket import *
 import sys
+from socket import *
 from hashlib import md5
 from tqdm import tqdm
 #from . import serv_utils
@@ -17,16 +17,17 @@ def md5sum(filename):
             hash.update(chunk)
     return hash.hexdigest()
 
-def file_handling (sock, addr):
+def file_handling (connection, addr):
     # Send the starting message from the server to the user
-    sock.send("OK@Welcome to the File Sever.\n Enter your Username and Password seperated by a space:".encode(FORMAT))
+    connection.send("OK@Welcome to the File Sever.\n Enter your Username and Password seperated by a space:".encode(FORMAT))
     # this part will detect if the user is in the server
 
     ##TODO: Enter the logic of the user file login name --> Simba 
 
-    message = sock.recv(1024).decode(FORMAT)
+    message = connection.recv(1024).decode(FORMAT)
     message =  message.split("\n")
     print(message[0])
+    
     proceed = "OK" # I just used this to see if the user can proceed
 
     # data send to the user 
@@ -40,10 +41,10 @@ def file_handling (sock, addr):
         data += "LOGOUT: Disconnect from the server.\n"
         data += "HELP: List all the commands."
 
-        sock.send(data.encode(FORMAT))
+        connection.send(data.encode(FORMAT))
 
         while True:
-            data = sock.recv(1024).decode(FORMAT)
+            data = connection.recv(1024).decode(FORMAT)
             data =  data.split("@")
             command = data[0]
 
@@ -61,7 +62,7 @@ def file_handling (sock, addr):
             if command =="4":
                 print("Downloading files")
              
-            sock.close()
+            connection.close()
 
 def main () : 
     print("Starting...")
@@ -73,7 +74,7 @@ def main () :
         connectSocket, addr = serverSocket.accept()
         cThread = threading.Thread(target=file_handling, args=(connectSocket, addr))
         cThread.start()
-        print(f"[ACTIVE CONNECTIONS] {threading.activeCount() - 1}")
+        print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")
 
 if __name__ == "__main__":
     main()

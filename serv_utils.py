@@ -1,8 +1,9 @@
-from cryptography.fernet import Fernet
 import os.path
-from time import time
 import os
+from cryptography.fernet import Fernet
 from tqdm import tqdm
+from time import time
+from socket import *
 
 
 FORMAT = "utf-8"
@@ -197,7 +198,7 @@ def delete_user(username: str):
 
 ##### FILE TRANSFER METHODS ####
 
-def delete(sock,server_data_files,filename):
+def delete(connection,server_data_files,filename):
     """
         Method to delete files, under the specified directory. It is the server directory that the user can
         delete from.
@@ -218,7 +219,7 @@ def delete(sock,server_data_files,filename):
         else:
             send_data += "File not found."
 
-    sock.send(send_data.encode(FORMAT))
+    connection.send(send_data.encode(FORMAT))
 
 def downloads(connection,textfileName):
     """
@@ -257,7 +258,7 @@ def viewFiles(connection,server_data_files):
             send_data_user += "\n".join(f for f in files) # listing the files in the directory 
          connection.send(send_data_user.encode(FORMAT))
 
-def upload (socket, name, text,size):
+def upload (connection, filename, filesize):
     """
         Method to upload the files to the server, under the server directory.
         params:
@@ -269,13 +270,14 @@ def upload (socket, name, text,size):
         specified directory 
     """
     # displaying on the cmd to show the progress of uploading the files
-    bar = tqdm(range(size), f"Receiving {name}", unit="B", unit_scale=True, unit_divisor=1024)
-    f = open(f"./serverfiles/recv_{name}", "wb")
+    bar = tqdm(range(filesize), f"Receiving {filename}", unit="B", unit_scale=True, unit_divisor=1024)
+    upload_file = open(f"./serverfiles/{filename}", "wb")
     while True:
-        if not text:
+        filedata = connection.recv(4096)
+        if not filedata:
             break
-        f.write(text)
-        bar.update(len(text))
-    f.close() 
-    socket.send("File has been successfully uploaded".encode)
+        upload_file.write(filedata)
+        bar.update(len(filedata))
+    upload_file.close() 
+    connection.send("File has been successfully uploaded".encode)
 
