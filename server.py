@@ -75,6 +75,7 @@ def main () :
         cThread = threading.Thread(target=file_handling, args=(connectSocket, addr))
         cThread.start()
         print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")
+        #add code to shutdown server. running in
 
 if __name__ == "__main__":
     main()
