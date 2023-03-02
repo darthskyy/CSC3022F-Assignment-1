@@ -90,10 +90,16 @@ def file_handling(conn, addr):
                 print("Download Files")
                 #data[1] : the user file name
                 # download function now returns the filesize and -1 if the file was not found
-                out_file_size = serv_utils.download(conn,data[1])
+                out_file_size, hashed = serv_utils.download(conn,data[1])
 
                 # if the file was not found it just continues
                 if out_file_size != -1:
+                    if not hashed:
+                        print("ERROR: Different hash")
+                        conn.send("NOTOK".encode())
+                    
+                    else:
+                        conn.send("OK".encode())
                     recv_msg = conn.recv(1024).decode()
                     recv_args = recv_msg.split("\t")
 
