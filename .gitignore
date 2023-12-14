@@ -1,6 +1,5 @@
-downloads/*
-serverfiles/*
-*.key
-users.txt
+serverfiles/
+downloads/
+files.json
+filekey.key
 users.bin
-
