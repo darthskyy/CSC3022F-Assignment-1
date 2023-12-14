@@ -163,10 +163,10 @@ def interactive_download(clientSocket):
     filename = ""
     isValidName = check_name_validity(filename)
     while not isValidName:
-        filename = input("Enter a (valid) name of the file to be downloaded:\n")
+        filename = input("Enter a (valid) name of the file to be downloaded (or nothing to return to previous):\n")
         
         # preemptively returns if the user decides not to download
-        if filename.lower() == "quit": return
+        if filename == "": return
         isValidName = check_name_validity(filename)
     
     down_filename = input("Enter the name you'd like to save the file under:\n")
@@ -523,12 +523,14 @@ def main():
                 
                 # prints out the pagination starting from page 1
                 current_page = 1
+                max_pages = math.ceil(len(files)/files_per_page)
                 option = "d"
                 while option:
                     clear_ui()
                     print_title("server files")
                     print_files(files, current_page, files_per_page=files_per_page)
-                    print("\nEnter 'p' followed by the number of the page to go to page, eg, 'p2'.")
+                    print("\nEnter the number of the page to go to page, eg, '2' to go to page 2.")
+                    print("Enter 'n' or 'p' to go the the next and previous pages respectively.")
                     print("Enter 'd' followed by then file index to download a file, eg, 'd3'.")
                     print("Enter nothing to return to main menu")
                     option = input("")
@@ -570,13 +572,17 @@ def main():
                         download(clientSocket, filename, down_filename)
                         time.sleep(1)
                     
-                    # user enters the page option
+                    # next and previous page
                     elif option[0] == "p":
+                        current_page = max(1, current_page-1)
+                    elif option[0] == "n":
+                        current_page = min(max_pages, current_page+1)
+                    # user enters the page option
+                    else:
                         clear_ui()
                         # checks if the page number is valid
                         try:
-                            to_go_page = int(option[1:])
-                            max_pages = math.ceil(len(files)/files_per_page)
+                            to_go_page = int(option)
                             if to_go_page > max_pages:
                                 print("Error: invalid page number")
                                 time.sleep(1)
@@ -587,9 +593,9 @@ def main():
                         except:
                             print("Error: invalid page number")
                             time.sleep(1)
-                            continue
-                    else:
-                        print("Error: invalid input.")
+                            continue             
+                    # else:
+                    #     print("Error: invalid input.")
             ## VIEW ENDS
 
             ## DOWNLOAD FUNCTION 
