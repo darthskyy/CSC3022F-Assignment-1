@@ -13,25 +13,10 @@ finally:
 
 import threading
 from socket import *
+from serv_utils import log_activity
 import serv_utils
 import time
 CURRENT_USERS = {}
-
-def log_activity(message: str) -> None:
-    """
-    Logs the activity of the server at the specific datetime it occured
-    """
-    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    
-    log = f"{current_time}\t{message}"
-    if not os.path.isfile("server_log.txt"):
-        with open("server_log.txt", "w") as f:
-            f.write(log)
-    else:
-        with open("server_log.txt", "a") as f:
-            f.write(log)
-    
-    print(log)
 
 
 def main () :
@@ -284,10 +269,9 @@ def file_handling(conn, addr):
                 elif data[1] == "ADMIN":
                     # the only admin feature so far is the addition of a user
                     if isAdmin:
-                        print(data)
                         status_of_user_added, add_msg = serv_utils.add_user(data[2],data[3], eval(data[4]))
                         allocation_status = serv_utils
-                        print(add_msg)
+                        log_activity(add_msg)
                         if(status_of_user_added):
                             conn.send(f"SUCCESS\t{add_msg}".encode())
                         else:

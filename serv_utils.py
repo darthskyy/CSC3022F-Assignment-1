@@ -1,16 +1,32 @@
 from cryptography.fernet import Fernet
-from server import log_activity
-from time import time
 from tqdm import tqdm
 import hashlib
 import json
 import os.path
 import os
 import sys
+import time
 
 
 
 FORMAT = "utf-8"
+
+
+def log_activity(message: str) -> None:
+    """
+    Logs the activity of the server at the specific datetime it occured
+    """
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    
+    log = f"{current_time}\t{message}"
+    if not os.path.isfile("server_log.txt"):
+        with open("server_log.txt", "w") as f:
+            print(log, file=f)
+    else:
+        with open("server_log.txt", "a") as f:
+            print(log, file=f)
+    
+    print(log)
 
 # User authentication methods
 def get_key():
