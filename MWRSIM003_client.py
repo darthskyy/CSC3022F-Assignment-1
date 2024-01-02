@@ -815,8 +815,27 @@ def main():
         ## MAIN FUNCTIONALITY ENDS          
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        print(e)
-        print("Forcefully disconnect from the server.")
+    running = True
+    while running:
+        try:
+            main()
+        except Exception as e:
+            print(e)
+            print("Forcefully disconnect from the server.")
+            continuing = input("Would you like to restart the client? (y/n): ")
+            if continuing == "y":
+                clear_ui()
+                print_title("restarting")
+                print("Restarting", end="")
+                dots(5)
+                pass
+            else:
+                # prints out a goodbye message when the user closes the app
+                clear_ui()
+                print_title("goodbye")
+                goodbye_msg = "Thank you for using the file sharing app :)"
+                for char in goodbye_msg:
+                    time.sleep(0.05)
+                    print(char, end="", flush=True)
+                time.sleep(0.2)
+                running = False
