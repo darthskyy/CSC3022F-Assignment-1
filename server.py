@@ -1,4 +1,4 @@
-import os, platform
+import os, platform, time
 # tries to install all the required modules
 try:
     os.system("pip install -r requirements.txt")
@@ -17,14 +17,30 @@ import serv_utils
 import time
 CURRENT_USERS = {}
 
+def log_activity(message: str) -> None:
+    """
+    Logs the activity of the server at the specific datetime it occured
+    """
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    
+    log = f"{current_time}\t{message}"
+    if not os.path.isfile("server_log.txt"):
+        with open("server_log.txt", "w") as f:
+            f.write(log)
+    else:
+        with open("server_log.txt", "a") as f:
+            f.write(log)
+    
+    print(log)
+
 
 def main () :
     # gets the port on which to start the server on then listens for connections
-    print("Starting...")
+    log_activity("Starting Session...")
     if not os.path.exists("filekey.key"):
-        print("No key found. Generating...")
+        log_activity("No key found. Generating...")
         serv_utils.make_key()
-    print("Encryption key found")
+    log_activity("Encryption key found")
     # creates serverfiles directory if it is non-existent
     if not os.path.isdir("./serverfiles"): os.mkdir("./serverfiles")
 
@@ -42,7 +58,7 @@ def main () :
     serverSocket = socket(AF_INET, SOCK_STREAM)
     serverSocket.bind((gethostbyname(gethostname()),serverPort))
     serverSocket.listen(1)
-    print("The server is ready to connect.\n")
+    log_activity("The server is ready to connect.\n")
     
 
     # starts a thread to handle multiple clients connecting on different threads
@@ -53,9 +69,9 @@ def main () :
     while True:
         admin_cmd = input("Enter 'exit()' to close the server\n")
         if admin_cmd == "exit()":
-            print("Closing server now.")
+            log_activity("Closing server session.")
             serverSocket.close()
-            print(serverSocket)
+            log_activity(serverSocket)
             return
 
 def threading_clients(serverSocket):
@@ -65,18 +81,18 @@ def threading_clients(serverSocket):
         try:
             connectSocket, addr = serverSocket.accept()
         except Exception as e:
-            print("Socket has been closed")
+            log_activity("Socket has been closed")
             break
         cThread = threading.Thread(target=file_handling, args=(connectSocket, addr))
         cThread.start()
-        print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 2}\n")
+        log_activity(f"[ACTIVE CONNECTIONS] {threading.active_count() - 2}\n")
 
 def file_handling(conn, addr):
     # this is the main function for each individual client to connect
     # try block catches a ConnectionError in which a client unexpectedly ends connection
     try:
         with conn:
-            print(f"Connected by {addr}")
+            log_activity(f"Connected by {addr}")
 
             ## HANDSHAKE PROTOCOL
             # receives handshaking protocol and sends back handshake protocol if everything is okay
@@ -89,7 +105,7 @@ def file_handling(conn, addr):
                 conn.close()
                 return
             
-            print(f"{addr}: {recv_args[1]}")
+            log_activity(f"{addr}: {recv_args[1]}")
             send_msg = "HANDSHAKE\tConnection established securely."
             conn.send(send_msg.encode())
 
@@ -110,7 +126,8 @@ def file_handling(conn, addr):
                     conn.send(send_msg.encode())
                 else:
                     username, password, log = str(recv_args[1]), str(recv_args[2]), str(recv_args[3])
-                    print(f"{log}")
+                    log = f"Login attempt {i} by {addr} with {username} || {password}"
+                    log_activity(f"{log}")
                     response = serv_utils.login(username, password)
                     loggedIn = response[0]
                     send = response[1] + "\t" + response[2]
@@ -118,11 +135,17 @@ def file_handling(conn, addr):
                     if loggedIn:
                         # there is a dictionary of current users and the addresses they are logged in from
                         isAdmin = (response[2] == "ADMIN")
+                        log_activity(f"{addr} successfully logged in as {response[2]}")
                         if username in CURRENT_USERS:
                             CURRENT_USERS[username].append(addr)
                         else:
                             CURRENT_USERS[username] = [addr]
                         break
+                    else:
+                        # if the user fails to login, the loop continues
+                        reason = response[1].split('\t')[1]
+                        log_activity(f"Login attempt {i} by {addr} failed. Reason: {reason}.")
+                        continue
             
 
             # MAIN FUNCTIONALITY
@@ -139,13 +162,13 @@ def file_handling(conn, addr):
                     pass
                 else:
                     #add functionality for error bounce back
-                    print("Message error")
+                    log_activity("Message error")
                     break
 
                 # VIEW FUNCTIONALITY
                 if data[1] == "VIEW":
 
-                    print("View files")
+                    log_activity(f"{addr} requesting file list")
                     # gets a string representation of all the files in the system and transmits it
                     file_request = serv_utils.viewFiles(server_data_files="serverfiles")
                     
@@ -160,17 +183,17 @@ def file_handling(conn, addr):
                     # confirms if the file was actually sent to the client
                     if file_request[0]:
                         #if we've actually gotten something without a hitch
-                        print(f"Successfully sent file list to {addr}")
+                        log_activity(f"Successfully sent file list to {addr}")
                     else:
-                        print("Error encounted acquiring file list")
+                        log_activity("Error encounted acquiring file list")
 
                 # DOWNLOAD FUNCTIONALITY
                 elif data[1]=="DOWNLOAD":
-                    print("Download Files")
                     #data[1] : the user file name
                     # download function now returns the filesize and -1 if the file was not found
                     filename = data[2]
                     file_request = serv_utils.check_for_file(filename)
+                    log_activity(f"{addr} requesting file download of '{filename}'")
                     
                     # if file request returns a negative, the file missing error will be cause by filesize
                     if file_request[0]:
@@ -180,12 +203,16 @@ def file_handling(conn, addr):
                         if file_password:
                             # sends a request for the password and handles the receipt from the client
                             conn.send(f"SUCCESS\tLOCKED\tThe file: {file_request[1][0]} is password protected".encode())
+                            log_activity(f"Sending {addr} password request for '{filename}'")
                             recv_msg = conn.recv(1024).decode()
                             recv_args = recv_msg.split("\t")
                             if recv_args[1] == "PASSWORD":
                                 if recv_args[2] != file_password:
                                     conn.send("FAILURE\tNOTAUTH\tPassword incorrect. Request terminated.".encode())
+                                    log_activity(f"{addr} password incorrect for '{filename}'. Operation cancelled.")
                                     continue
+                                else:
+                                    log_activity(f"{addr} password accepted for '{filename}'.")
                     
                     # sends the file to the client using the download function
                     # gets the file size and the hashkey for the file in return
@@ -194,10 +221,11 @@ def file_handling(conn, addr):
                     # if the file was not found it just continues
                     if out_file_size != -1:
                         if not hashed:
-                            print("ERROR: Opposing hash received")
+                            log_activity("ERROR: Opposing hash received from client: {addr}.")
                             conn.send("FAILURE\tDifferent hashes from Client and Server.".encode())
                             break
                         else:
+                            log_activity(f"Hash from client: {addr} matches.")
                             conn.send("SUCCESS\tClient and Server hashes match".encode())
 
                         # receives a message from client detailing if the file has been received or
@@ -210,13 +238,14 @@ def file_handling(conn, addr):
                             send_msg = "SUCCESS\t"
                             if in_file_size==out_file_size:
                                 send_msg += "File was fully sent"
-                                print(f"File {filename} was sent to {addr}")
+                                log_activity(f"File {filename} was sent to {addr}")
                             else:
                                 send_msg += "File was sent partially"
-                                print(f"File {filename} was sent to {addr} partially")
+                                log_activity(f"File {filename} was sent to {addr} partially")
                             
                             conn.send(send_msg.encode())
                         else:
+                            log_activity(f"File {filename} transfer to {addr} failed. Reason: File lost in transmission.")
                             send_msg = "FAILUTE\tFile might have been lost"
                             conn.send(send_msg.encode())
 
@@ -224,20 +253,22 @@ def file_handling(conn, addr):
                 elif data[1] == "UPLOAD":
                     # recv_msg = conn.recv(1024).decode()
                     # uploading files onto the server
-                    print("UPLOADING FILE TO THE SERVER")
                     # recieving the message from the user 
                     filename = data[2]
                     password = data[3]
                     filesize = int(data[4])
+                    log_activity(f"{addr} requesting file upload of '{filename}' to server")
 
                     # if the file that the client is uploading has an identical name to a file in serverfiles
                     # the upload is blocked
                     if (serv_utils.check_for_file(filename))[0]:
                         send_msg = f"NOTOK\tFile: {filename} already exists on server. Process ended."
+                        log_activity(f"{addr} file upload of '{filename}' blocked by server. Reason: File already exists.")
                         conn.send(send_msg.encode())
                         continue
                     else:
                         send_msg = "OK\tServer ready to receive the file"
+                        log_activity(f"{addr} file upload request of '{filename}' accepted by server. Ready to receive file.")
                         conn.send(send_msg.encode())
 
                     # expects a messages like UPLOAD\tfilename\tpassword\tfilesize
@@ -246,13 +277,16 @@ def file_handling(conn, addr):
                 elif data[1] == "LOGOUT":
                     CURRENT_USERS[username].remove(addr)
                     conn.send("SUCCESS\tLOGOUT\tUser successfully logged out".encode())
+                    log_activity(f"{addr} logged out from current session.")
                     conn.close()
                     break
 
                 elif data[1] == "ADMIN":
                     # the only admin feature so far is the addition of a user
                     if isAdmin:
+                        print(data)
                         status_of_user_added, add_msg = serv_utils.add_user(data[2],data[3], eval(data[4]))
+                        allocation_status = serv_utils
                         print(add_msg)
                         if(status_of_user_added):
                             conn.send(f"SUCCESS\t{add_msg}".encode())
@@ -260,6 +294,7 @@ def file_handling(conn, addr):
                             conn.send(f"FAILURE\t{add_msg}".encode())
                     else:
                         conn.send("FAILURE\tERROR\tTried to access admin privileges on regular account")
+                        log_activity(f"POSSIBLE RISK: {addr} tried to access admin privileges on regular account")
                         conn.close()
                         break
         

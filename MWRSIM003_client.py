@@ -119,6 +119,11 @@ def logout(clientSocket, username):
     clientSocket.close()
     print(f"{username} successfully logged out.")
 
+def is_numeric(input: str) -> bool:
+    for char in input:
+        if char not in "0123456789": return False
+    
+    return True
 def interactive_add_user(clientSocket):
     # modular code to add a user to the server using admin privileges
 
@@ -137,6 +142,9 @@ def interactive_add_user(clientSocket):
 
     # gets the account details for the account to be added
     username = input("Enter the username: ")
+    allocation = input("Enter storage allocation for the user (Mb): ")
+    while not is_numeric(allocation):
+        allocation = input("Enter storage allocation for the user (Mb): ")
     password = input("Enter the password: ")
     password_conformation = input("Confirm the password entered: ")
     while(password != password_conformation):
@@ -145,7 +153,7 @@ def interactive_add_user(clientSocket):
         password_conformation = input("Confirm the password entered: ")
 
     # sends the message to the server requesting the addition of a user and receives a response on the status
-    send_msg = send_msg + f"\t{username}\t{password}\t{user_admin}"
+    send_msg = send_msg + f"\t{username}\t{password}\t{user_admin}\t{allocation}"
     clientSocket.send(send_msg.encode())
     recv_msg = clientSocket.recv(1024).decode()
     recv_args = recv_msg.split("\t")

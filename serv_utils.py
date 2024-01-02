@@ -1,4 +1,5 @@
 from cryptography.fernet import Fernet
+from server import log_activity
 from time import time
 from tqdm import tqdm
 import hashlib
@@ -6,6 +7,7 @@ import json
 import os.path
 import os
 import sys
+
 
 
 FORMAT = "utf-8"
@@ -37,7 +39,7 @@ def make_key():
     key = Fernet.generate_key()
     key_file.write(key)
     key_file.close()
-    print("Key generated")
+    log_activity("Key generated")
     add_user("admin", "admin", True)
 
 #logs in a user to the server
@@ -107,7 +109,7 @@ def add_user(username, passwd, isAdmin=False):
     # the thing that will be entered into the file
     hashed = username + "," + passwd
     if isAdmin: hashed += ",ADMIN"
-    
+
     # gets the hash key from the file
     fernet = get_key()
     if fernet==False:
@@ -153,8 +155,26 @@ def add_user(username, passwd, isAdmin=False):
         else: out_str += " as REGULAR"
         return True, out_str
    
+def add_allocation_storage(username: str, allocation: str):
+    if not os.path.isfile("./allocation.bin"):
+        x = open("./allocation.bin", "x")
+        x.close()
+        del x
+    
+    # gets the hash key from the file
+    fernet = get_key()
+    if fernet==False:
+        return False, "Error: server encryption error."
+    
+    with open("./allocation.bin", "rb") as f:
+        all_users = f.read()
+    
+    all_users_str = fernet.decrypt(all_users).decode()
+    all_users_list = all_users_str.split("\r\n")
 
+    return
 
+    
 def user_exists(username: str):
     """
     Method to check if a user exists in the server.
@@ -235,10 +255,9 @@ def delete_user(username: str):
 
 # downloads a file using a connection socket and the filename and due protocol
 def download(connection, filename):
-    print(f"Checking if the file with name {filename} exists")
+    log_activity(f"Checking if the file with name '{filename}' exists.")
     if(os.path.exists(f"./serverfiles/{filename}")):
-        print(f"File {filename} exixts!")
-        print(f"Downloading file {filename} into directory ") #directory decided by client
+        log_activity(f"File '{filename}' found. Sending file to client.")
         out_file = open(f"./serverfiles/{filename}","rb") #changed to rb so no need to encode
         out_hash = hashlib.md5()
         # sends the file size so that the client can prepare the space
@@ -251,8 +270,8 @@ def download(connection, filename):
         status = recv_args[0]
         # if the client is ready to receive it sends the file in a big packet of bytes
         if status == "OK":
-            print(f"{connection.getpeername()}: {recv_args[2]}")
-            bar = tqdm(range(out_file_size), f"Sending {filename}", unit ="B", unit_scale=True, unit_divisor = 1024)
+            log_activity(f"{connection.getpeername()}: {recv_args[2]}")
+            bar = tqdm(range(out_file_size), f"Transmitting", unit ="B", unit_scale=True, unit_divisor = 1024)
             while True:
                 data = out_file.read(4096)
                 if not data:
@@ -272,7 +291,7 @@ def download(connection, filename):
         # if the file does not exist, it just sends that the file could not be found
         send_msg = f"NOTOK\tNOTTRANSMITTING\tFile: {filename} could not be found"
         connection.send(send_msg.encode())
-        print(f"The file under the name {filename} does not exist")
+        log_activity(f"The file under the name {filename} does not exist")
         return -1, False
 
 # checks if a file is in the directory
@@ -341,7 +360,7 @@ def update_files():
             files_dict = json.load(files)
     except FileNotFoundError as fe:
         with open("files.json", "w") as files:
-            print("{}", file=files, end="")
+            log_activity("{}", file=files, end="")
             
         with open("files.json", "r") as files:
             files_dict = json.load(files)
@@ -441,14 +460,14 @@ def upload (connection, filename, password, filesize):
     # sends an appropriate message given the status of the has
     if (out_hash != in_hash.hexdigest()):
         connection.send("NOTOK\tFile invalid".encode())
-        print("Uploaded with wrong hash.")
+        log_activity("Uploaded with wrong hash.")
     elif(os.path.exists(f"./serverfiles/{filename}")):
         add_file(filename, password)
         connection.send("OK\tFile has been successfully uploaded.".encode())
-        print("Successfully uploaded.")
+        log_activity("Successfully uploaded.")
     else:
         connection.send("NOTOK\tFile has not been successfully uploaded.".encode())
-        print("File upload has failed.")
+        log_activity("File upload has failed.")
 
 
 if __name__=="__main__":
