@@ -43,7 +43,7 @@ def main () :
     serverSocket = socket(AF_INET, SOCK_STREAM)
     serverSocket.bind((gethostbyname(gethostname()),serverPort))
     serverSocket.listen(1)
-    log_activity("The server is ready to connect.\n")
+    log_activity(f"The server: {gethostbyname(gethostname())} is ready to connect.\n")
     
 
     # starts a thread to handle multiple clients connecting on different threads
