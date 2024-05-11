@@ -13,4 +13,7 @@ The `client.py` script is used to run a client for the server. A server IP addre
 Once verified, the user will be presented with a menu of available options on the server.
 
 ## Adding users
-Admin users are able to add users to the server. While logged in as an admin, use option 5 to add another user to the server. The admin must then provide a username and password for the new user. 
+Admin users are able to add users to the server. While logged in as an admin, use option 5 to add another user to the server. The admin must then provide a username and password for the new user.
+
+### Authors
+Tapera Chikumbu, Racquel Nina Dennison & Simbarashe Mawere
